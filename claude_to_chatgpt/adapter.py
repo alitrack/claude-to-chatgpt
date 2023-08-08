@@ -199,26 +199,15 @@ class ClaudeAdapter:
 
 
 class WebClaudeAdapter:
-    def __init__(self, conversation_name="New Conversation"):
+    def __init__(self, claude_base_url="https://claude.ai"):
         self.claude_session_key = os.getenv("CLAUDE_SESSION_KEY", None)
-        # self.claude_base_url = claude_base_url
-        client = claude_client.ClaudeClient(self.claude_session_key)
-
-        organizations = client.get_organizations()
-        # You can omit passing in the organization uuid and the wrapper will assume
-        # you will use the first organization instead.
-        self.claude_obj = claude_wrapper.ClaudeWrapper(client, organization_uuid=organizations[0]['uuid'])
-        self.conversation_uuid = self.claude_obj.start_new_conversation(conversation_name, "Hi Claude!")
-
-
-
-    def get_api_key(self, headers):
-        return self.claude_session_key
-        # auth_header = headers.get("authorization", None)
-        # if auth_header:
-        #     return auth_header.split(" ")[1]
-        # else:
-        #     return self.claude_api_key
+        self.claude_base_url = claude_base_url
+    def get_api_key(self, headers): 
+        auth_header = headers.get("authorization", None)
+        if auth_header:
+            return auth_header.split(" ")[1]
+        else:
+            return self.claude_session_key
 
     def convert_messages_to_prompt(self, messages):
         prompt = ""
@@ -319,8 +308,19 @@ class WebClaudeAdapter:
         openai_params = await request.json()
         headers = request.headers
         claude_params = self.openai_to_claude_params(openai_params)
-        # api_key = self.get_api_key(headers)
+        api_key = self.get_api_key(headers)
+        client = claude_client.ClaudeClient(api_key)
+
+        organizations = client.get_organizations()
+        # You can omit passing in the organization uuid and the wrapper will assume
+        # you will use the first organization instead.
+        claude_obj = claude_wrapper.ClaudeWrapper(client, organization_uuid=organizations[0]['uuid'])
+        
+        conversation_uuid = claude_obj.start_new_conversation("New Conversation", "Hi Claude!")
+        # claude_obj.set_conversation_context()
+          
         # conversation_uuid = claude_obj.get_conversations()[0]['uuid']
-        claude_response = self.claude_obj.send_message(claude_params.get("prompt"), conversation_uuid=self.conversation_uuid)
+        claude_response = claude_obj.send_message(claude_params.get("prompt"), conversation_uuid=conversation_uuid)
+        
         openai_response = self.claude_to_chatgpt_response(claude_response)
         yield openai_response
