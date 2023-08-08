@@ -1,19 +1,26 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from claude_to_chatgpt.adapter import ClaudeAdapter
+from claude_to_chatgpt.adapter import ClaudeAdapter,WebClaudeAdapter
 import json
 import os
 from claude_to_chatgpt.logger import logger
 from claude_to_chatgpt.models import models_list
+from dotenv import load_dotenv
 
-CLAUDE_BASE_URL = os.getenv("CLAUDE_BASE_URL", "https://api.anthropic.com")
+load_dotenv()
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 PORT = os.getenv("PORT", 8000)
 
-logger.debug(f"claude_base_url: {CLAUDE_BASE_URL}")
+WEB = os.getenv('WEB',True)
 
-adapter = ClaudeAdapter(CLAUDE_BASE_URL)
+if not WEB:
+    CLAUDE_BASE_URL = os.getenv("CLAUDE_BASE_URL", "https://api.anthropic.com")
+    logger.debug(f"claude_base_url: {CLAUDE_BASE_URL}")
+    adapter = ClaudeAdapter(CLAUDE_BASE_URL)
+else:
+    adapter = WebClaudeAdapter("New Conversation")
 
 app = FastAPI()
 
