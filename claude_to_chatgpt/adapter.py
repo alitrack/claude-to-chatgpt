@@ -322,5 +322,17 @@ class WebClaudeAdapter:
         # conversation_uuid = claude_obj.get_conversations()[0]['uuid']
         claude_response = claude_obj.send_message(claude_params.get("prompt"), conversation_uuid=conversation_uuid)
         
-        openai_response = self.claude_to_chatgpt_response(claude_response)
-        yield openai_response
+
+        if  claude_params.get("stream", False):
+            openai_response = self.claude_to_chatgpt_response_stream(claude_response)
+            yield openai_response            
+            yield self.claude_to_chatgpt_response_stream(
+            {
+            "completion": "",
+            "stop_reason": "stop",
+            }
+            )
+            yield "[DONE]"
+        else:
+            openai_response = self.claude_to_chatgpt_response(claude_response)
+            yield openai_response
