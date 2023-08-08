@@ -8,6 +8,7 @@ from claude_to_chatgpt.logger import logger
 from claude_to_chatgpt.models import model_map
 from claude import claude_wrapper
 from claude import claude_client
+import datetime
 
 role_map = {
     "system": "Human",
@@ -304,6 +305,12 @@ class WebClaudeAdapter:
 
         return openai_response
 
+    def get_uuid_by_name(self,data,name):
+        for item in data:
+            if item['name'] == f"💬 {name}":
+                return item['uuid']
+        return None
+
     async def chat(self, request: Request):
         openai_params = await request.json()
         headers = request.headers
@@ -315,13 +322,15 @@ class WebClaudeAdapter:
         # You can omit passing in the organization uuid and the wrapper will assume
         # you will use the first organization instead.
         claude_obj = claude_wrapper.ClaudeWrapper(client, organization_uuid=organizations[0]['uuid'])
+        conversations = claude_obj.get_conversations()
+
+        current_date = datetime.datetime.now().date()
+        formatted_date = current_date.strftime("%Y%m%d")
         
-        conversation_uuid = claude_obj.start_new_conversation("New Conversation", "Hi Claude!")
-        # claude_obj.set_conversation_context()
-          
-        # conversation_uuid = claude_obj.get_conversations()[0]['uuid']
+        conversation_uuid = self.get_uuid_by_name(conversations,formatted_date)
+        if conversations ==[]:
+            conversation_uuid = claude_obj.start_new_conversation("New Conversation", formatted_date)
         claude_response = claude_obj.send_message(claude_params.get("prompt"), conversation_uuid=conversation_uuid)
-        
 
         if  claude_params.get("stream", False):
             openai_response = self.claude_to_chatgpt_response_stream(claude_response)
